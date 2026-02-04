@@ -1,9 +1,10 @@
 import path from "node:path";
+import { defineConfig } from "vite";
 import { reactRouter } from "@react-router/dev/vite";
 import { reactRouterHonoServer } from "react-router-hono-server/dev";
-import { defineConfig } from "vite";
 import babel from "vite-plugin-babel";
 import tsconfigPaths from "vite-tsconfig-paths";
+
 import { addRenderIds } from "./plugins/addRenderIds";
 import { aliases } from "./plugins/aliases";
 import consoleToParent from "./plugins/console-to-parent";
@@ -14,8 +15,18 @@ import { restart } from "./plugins/restart";
 import { restartEnvFileChange } from "./plugins/restartEnvFileChange";
 
 export default defineConfig({
-	// Keep them available via import.meta.env.NEXT_PUBLIC_*
+	// Expose NEXT_PUBLIC_* vars
 	envPrefix: "NEXT_PUBLIC_",
+
+	// ✅ VERCEL + NODE 20 FIX
+	build: {
+		target: "node20",
+		ssr: true,
+	},
+
+	esbuild: {
+		target: "node20",
+	},
 
 	optimizeDeps: {
 		include: ["fast-glob", "lucide-react"],
@@ -30,7 +41,7 @@ export default defineConfig({
 		],
 	},
 
-	// 🔑 CRITICAL FIX FOR VERCEL SSR BUILDS
+	// ✅ REQUIRED FOR SSR + STYLED-JSX
 	ssr: {
 		noExternal: [
 			"@react-router/dev",
@@ -75,10 +86,12 @@ export default defineConfig({
 		consoleToParent(),
 		loadFontsFromTailwindSource(),
 		addRenderIds(),
-		reactRouter(),
 		tsconfigPaths(),
 		aliases(),
 		layoutWrapperPlugin(),
+
+		// ⚠️ MUST BE LAST
+		reactRouter(),
 	],
 
 	resolve: {
@@ -96,18 +109,10 @@ export default defineConfig({
 	clearScreen: false,
 
 	server: {
-		allowedHosts: true,
 		host: "0.0.0.0",
 		port: 4000,
 		hmr: {
 			overlay: false,
-		},
-		warmup: {
-			clientFiles: [
-				"./src/app/**/*",
-				"./src/app/root.tsx",
-				"./src/app/routes.ts",
-			],
 		},
 	},
 });
