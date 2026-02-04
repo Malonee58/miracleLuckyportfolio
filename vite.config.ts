@@ -15,10 +15,10 @@ import { restart } from "./plugins/restart";
 import { restartEnvFileChange } from "./plugins/restartEnvFileChange";
 
 export default defineConfig({
-	// Expose NEXT_PUBLIC_* vars
+	// Expose NEXT_PUBLIC_* env vars
 	envPrefix: "NEXT_PUBLIC_",
 
-	// ✅ VERCEL + NODE 20 FIX
+	// ✅ Vercel + Node 20
 	build: {
 		target: "node20",
 		ssr: true,
@@ -41,7 +41,7 @@ export default defineConfig({
 		],
 	},
 
-	// ✅ REQUIRED FOR SSR + STYLED-JSX
+	// ✅ REQUIRED for SSR + styled-jsx
 	ssr: {
 		noExternal: [
 			"@react-router/dev",
@@ -57,9 +57,11 @@ export default defineConfig({
 		nextPublicProcessEnv(),
 		restartEnvFileChange(),
 
+		// 🔑 CRITICAL FIX — tell RR where src/app is
 		reactRouterHonoServer({
 			serverEntryPoint: "./__create/index.ts",
 			runtime: "node",
+			appDirectory: "src/app",
 		}),
 
 		babel({
@@ -91,7 +93,9 @@ export default defineConfig({
 		layoutWrapperPlugin(),
 
 		// ⚠️ MUST BE LAST
-		reactRouter(),
+		reactRouter({
+			appDirectory: "src/app",
+		}),
 	],
 
 	resolve: {
