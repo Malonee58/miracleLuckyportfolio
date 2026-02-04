@@ -93,9 +93,10 @@ export default defineConfig({
 		layoutWrapperPlugin(),
 
 		// ⚠️ MUST BE LAST
-		reactRouter({
-			appDirectory: "src/app",
-		}),
+	reactRouter({
+	appDirectory: "src/app",
+}),
+
 	],
 
 	resolve: {
