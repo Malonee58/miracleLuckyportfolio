@@ -1,5 +1,4 @@
-import { handle } from "react-router-hono-server/vercel";
-// This imports the server build created by 'react-router build'
-import * as build from "../build/server/index.js";
+import { api } from './api';
 
-export default handle(build);
+export default api;
+
