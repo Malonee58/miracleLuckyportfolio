@@ -9,26 +9,17 @@ if (globalThis.fetch) {
 	globalThis.fetch = updatedFetch;
 }
 
-/**
- * 1. Use Vite's glob import to find all route.js files at BUILD TIME.
- * This ensures the routes are included in the Vercel deployment.
- */
+// 1. Vite Glob Import (Eagerly loaded at build time)
 const routeModules = import.meta.glob("../src/app/api/**/route.js", {
 	eager: true,
 });
 
-/**
- * 2. Helper to transform the Vite file path into a Hono route pattern.
- * Example: '../src/app/api/user/[id]/route.js' -> '/user/:id'
- */
+// 2. Path Helper
 function getHonoPathFromVitePath(vitePath: string): string {
-	// Remove the prefix and the filename
 	let path = vitePath.replace("../src/app/api", "").replace("/route.js", "");
 
 	if (path === "") return "/";
 
-	// Handle Dynamic Routes: [id] -> :id
-	// Handle Catch-all: [...path] -> :path{.*}
 	return path
 		.split("/")
 		.map((segment) => {
@@ -42,12 +33,9 @@ function getHonoPathFromVitePath(vitePath: string): string {
 		.join("/");
 }
 
-// 3. Register the routes
-async function registerRoutes() {
-	// Clear existing routes (useful for HMR)
+// 3. Synchronous Registration (Safe for Build)
+function registerRoutes() {
 	api.routes = [];
-
-	// Sort paths so deeper routes or root routes don't shadow others
 	const sortedPaths = Object.keys(routeModules).sort(
 		(a, b) => b.length - a.length,
 	);
@@ -55,18 +43,16 @@ async function registerRoutes() {
 	for (const fileKey of sortedPaths) {
 		const route: any = routeModules[fileKey];
 		const honoPath = getHonoPathFromVitePath(fileKey);
-
 		const methods = ["GET", "POST", "PUT", "DELETE", "PATCH"];
 
 		for (const method of methods) {
-			if (route[method]) {
-				const handler: Handler = async (c) => {
-					const params = c.req.param();
-					// In production, we use the already-imported 'route' module
-					return await route[method](c.req.raw, { params });
+			if (route && route[method]) {
+				const m = method.toLowerCase();
+				// Register the handler directly
+				const handler: Handler = (c) => {
+					return route[method](c.req.raw, { params: c.req.param() });
 				};
 
-				const m = method.toLowerCase();
 				if (m === "get") api.get(honoPath, handler);
 				else if (m === "post") api.post(honoPath, handler);
 				else if (m === "put") api.put(honoPath, handler);
@@ -77,13 +63,12 @@ async function registerRoutes() {
 	}
 }
 
-// Initial registration
-await registerRoutes();
+// Execute immediately without 'await'
+registerRoutes();
 
-// Support Hot Module Replacement (HMR) for local development
 if (import.meta.hot) {
 	import.meta.hot.accept(() => {
-		registerRoutes().catch(console.error);
+		registerRoutes();
 	});
 }
 
