@@ -1,6 +1,6 @@
-import type { ReactRouterConfig } from "@react-router/dev/config";
+// react-router.config.ts
+import type { Config } from "@react-router/dev/config";
 
 export default {
-  prerender: false,
-} satisfies ReactRouterConfig;
-
+	appDirectory: "src/app",
+} satisfies Config;
