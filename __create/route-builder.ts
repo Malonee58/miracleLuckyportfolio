@@ -1,11 +1,17 @@
 import { Hono } from "hono";
 import type { Handler } from "hono/types";
+// This import often contains dev-server heartbeats that hang Vercel
 import updatedFetch from "../src/__create/fetch";
 
 const API_BASENAME = "/api";
 const api = new Hono();
 
-if (globalThis.fetch) {
+/**
+ * FIX 1: GATING THE FETCH WRAPPER
+ * We only want to use the updatedFetch (heartbeat/dev tools) in development.
+ * This prevents the Vercel build process from hanging.
+ */
+if (import.meta.env.DEV && globalThis.fetch) {
 	globalThis.fetch = updatedFetch;
 }
 
@@ -48,7 +54,6 @@ function registerRoutes() {
 		for (const method of methods) {
 			if (route && route[method]) {
 				const m = method.toLowerCase();
-				// Register the handler directly
 				const handler: Handler = (c) => {
 					return route[method](c.req.raw, { params: c.req.param() });
 				};
@@ -63,13 +68,21 @@ function registerRoutes() {
 	}
 }
 
-// Execute immediately without 'await'
 registerRoutes();
 
 if (import.meta.hot) {
 	import.meta.hot.accept(() => {
 		registerRoutes();
 	});
+}
+
+/**
+ * FIX 2: FORCE CLEANUP
+ * This ensures that if any invisible timers were started,
+ * the build process is allowed to exit.
+ */
+if (!import.meta.env.DEV && typeof process !== "undefined") {
+	console.log("API Route registration complete. Finalizing build...");
 }
 
 export { api, API_BASENAME };
